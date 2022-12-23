@@ -12,6 +12,9 @@ std::vector<fdf::Vertex> fdf::MapParser::parse(
 	size_t rowLength = _vertices.size();
 
 	while (getCurrentChar() != '\0') {
+		_currentCol = 0;
+		++_currentRow;
+
 		parseRow();
 		if (_vertices.size() % rowLength != 0) {
 			// not complete tetragon
@@ -62,6 +65,7 @@ void fdf::MapParser::vertex() {
 	}
 
 	_vertices.push_back(vert);
+	++_currentCol;
 }
 
 void fdf::MapParser::delim() {
@@ -110,7 +114,13 @@ uint32_t fdf::MapParser::hexDigit() {
 			
 			uint32_t n = 0;
 			while (isHexDigit(getCurrentChar())) {
-				n = (n * 16) + getCurrentChar() - '0';
+				if (std::isdigit(getCurrentChar())) {
+					n = (n * 16) + getCurrentChar() - '0';
+				}
+				else {
+					n = (n * 16) + getCurrentChar() - 'A' + 10;
+				}
+				
 				cursorNext();
 			}
 
@@ -125,7 +135,6 @@ uint32_t fdf::MapParser::hexDigit() {
 bool fdf::MapParser::isHexDigit(char c) {
 	return (
 		std::isdigit(c) ||
-		('a' <= c && c <= 'f') ||
 		('A' <= c && c <= 'F')
 	);
 }
@@ -135,7 +144,7 @@ int main() {
 	std::vector<fdf::Vertex> result;
 
 	try {
-		result = parser.parse("maps/10-2.fdf");
+		result = parser.parse("maps/elem-col.fdf");
 	}
 	catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;

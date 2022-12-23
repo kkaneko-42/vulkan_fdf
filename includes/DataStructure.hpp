@@ -11,7 +11,7 @@ namespace fdf
 		float x, y, z;
 		uint32_t rgba;
 
-		Vertex() : x(0), y(0), z(0), rgba(0xffffff00) {}
+		Vertex() : x(0), y(0), z(0), rgba(0x000000ff) {}
 
 		void print() const {
 			std::cout << "(";
