@@ -14,4 +14,52 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="srcs\MapParser.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="srcs\Utils.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="srcs\Exceptions.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="includes\DataStructure.hpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\MapParser.hpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\Utils.hpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\Exceptions.hpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="maps\10-2.fdf" />
+    <None Include="maps\10-70.fdf" />
+    <None Include="maps\100-6.fdf" />
+    <None Include="maps\20-60.fdf" />
+    <None Include="maps\42.fdf" />
+    <None Include="maps\50-4.fdf" />
+    <None Include="maps\basictest.fdf" />
+    <None Include="maps\elem-col.fdf" />
+    <None Include="maps\elem-fract.fdf" />
+    <None Include="maps\elem.fdf" />
+    <None Include="maps\elem2.fdf" />
+    <None Include="maps\julia.fdf" />
+    <None Include="maps\mars.fdf" />
+    <None Include="maps\pentenegpos.fdf" />
+    <None Include="maps\plat.fdf" />
+    <None Include="maps\pnp_flat.fdf" />
+    <None Include="maps\pylone.fdf" />
+    <None Include="maps\pyra.fdf" />
+    <None Include="maps\pyramide.fdf" />
+    <None Include="maps\t1.fdf" />
+    <None Include="maps\t2.fdf" />
+  </ItemGroup>
 </Project>
