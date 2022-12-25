@@ -24,6 +24,15 @@
     <ClCompile Include="srcs\Exceptions.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="srcs\Renderer.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="srcs\GraphicsPipelineBuilder.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="srcs\main.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="includes\DataStructure.hpp">
@@ -36,6 +45,12 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="includes\Exceptions.hpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\Renderer.hpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\GraphicsPipelineBuilder.hpp">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -61,5 +76,14 @@
     <None Include="maps\pyramide.fdf" />
     <None Include="maps\t1.fdf" />
     <None Include="maps\t2.fdf" />
+    <None Include="shaders\shader.frag">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="shaders\shader.vert">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="shaders\compile.bat">
+      <Filter>ソース ファイル</Filter>
+    </None>
   </ItemGroup>
 </Project>

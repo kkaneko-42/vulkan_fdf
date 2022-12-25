@@ -1,7 +1,7 @@
 #include "MapParser.hpp"
 #include "Utils.hpp"
 
-std::vector<fdf::Vertex> fdf::MapParser::parse(
+fdf::MapParser::ParseResult fdf::MapParser::parse(
 	const std::string& filename)
 {
 	_fileContent = fdf::readFile(filename);
@@ -15,13 +15,12 @@ std::vector<fdf::Vertex> fdf::MapParser::parse(
 		_currentCol = 0;
 		++_currentRow;
 
-		parseRow();
+		std::vector<fdf::Vertex> row = parseRow();
 		if (_vertices.size() % rowLength != 0) {
 			// not complete tetragon
 			throw std::runtime_error("not complete tetragon");
 		}
 	}
-
 	return _vertices;
 }
 
@@ -128,7 +127,7 @@ uint32_t fdf::MapParser::hexDigit() {
 		}
 	}
 
-	// invalid hex
+	// invalid hex such as "0x", "ffff00"
 	throw std::runtime_error("invalid hex");
 }
 
@@ -138,7 +137,7 @@ bool fdf::MapParser::isHexDigit(char c) {
 		('A' <= c && c <= 'F')
 	);
 }
-
+/*
 int main() {
 	fdf::MapParser parser;
 	std::vector<fdf::Vertex> result;
@@ -157,3 +156,4 @@ int main() {
 
 	return 0;
 }
+*/
