@@ -12,9 +12,12 @@ namespace fdf
 	class MapParser
 	{
 	public:
-		typedef std::vector< std::vector<fdf::Vertex> > ParseResult;
-		
-		ParseResult parse(
+		struct ParseResult {
+			std::vector<fdf::Vertex> vertices;
+			std::vector<uint16_t> indices;
+		};
+
+		std::vector<fdf::Vertex> parse(
 			const std::string& filename
 		);
 
@@ -29,7 +32,7 @@ namespace fdf
 
 		char getCurrentChar();
 		void cursorNext();
-		std::vector<fdf::Vertex> parseRow();
+		void parseRow();
 		void vertex();
 		void delim();
 		void newline();

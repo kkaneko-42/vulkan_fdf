@@ -1,7 +1,7 @@
 #include "MapParser.hpp"
 #include "Utils.hpp"
 
-fdf::MapParser::ParseResult fdf::MapParser::parse(
+std::vector<fdf::Vertex> fdf::MapParser::parse(
 	const std::string& filename)
 {
 	_fileContent = fdf::readFile(filename);
@@ -15,12 +15,13 @@ fdf::MapParser::ParseResult fdf::MapParser::parse(
 		_currentCol = 0;
 		++_currentRow;
 
-		std::vector<fdf::Vertex> row = parseRow();
+		parseRow();
 		if (_vertices.size() % rowLength != 0) {
 			// not complete tetragon
 			throw std::runtime_error("not complete tetragon");
 		}
 	}
+
 	return _vertices;
 }
 

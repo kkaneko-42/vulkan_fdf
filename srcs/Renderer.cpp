@@ -258,11 +258,11 @@ void fdf::Renderer::createPipeline() {
 		"shaders/frag.spv",
 		"main"
 	);
-	builder.setPrimitiveTopology(vk::PrimitiveTopology::eLineStrip);
+	builder.setPrimitiveTopology(vk::PrimitiveTopology::eTriangleStrip);
 	builder.setVertexBinding(sizeof(fdf::Vertex));
 	builder.setVertexPosAttribute(vk::Format::eR32G32B32Sfloat, offsetof(fdf::Vertex, x));
 	builder.setVertexColorAttribute(vk::Format::eR32G32B32A32Uint, offsetof(fdf::Vertex, rgba));
-	builder.setPolygonMode(vk::PolygonMode::eFill);
+	builder.setPolygonMode(vk::PolygonMode::eLine);
 	builder.setWH(kWinWidth, kWinHeight);
 	builder.setRenderPass(_renderPass.get());
 	builder.setSubpass(0);
@@ -317,7 +317,8 @@ void fdf::Renderer::recordCmd() {
 	_cmdBuffer->bindVertexBuffers(0, { _vertexBuffer.get()}, { 0 });
 	_cmdBuffer->bindIndexBuffer(_indexBuffer.get(), 0, vk::IndexType::eUint32);
 	
-	_cmdBuffer->draw(_vertices.size(), 1, 0, 0);
+	// _cmdBuffer->draw(_vertices.size(), 1, 0, 0);
+	_cmdBuffer->drawIndexed(_vertexIndices.size(), 1, 0, 0, 0);
 
 	_cmdBuffer->endRenderPass();
 	_cmdBuffer->end();
