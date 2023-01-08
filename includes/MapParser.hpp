@@ -14,10 +14,10 @@ namespace fdf
 	public:
 		struct ParseResult {
 			std::vector<fdf::Vertex> vertices;
-			std::vector<uint16_t> indices;
+			size_t row, col;
 		};
 
-		std::vector<fdf::Vertex> parse(
+		ParseResult parse(
 			const std::string& filename
 		);
 

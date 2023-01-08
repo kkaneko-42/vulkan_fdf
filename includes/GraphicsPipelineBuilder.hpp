@@ -8,6 +8,12 @@ namespace fdf
 	class GraphicsPipelineBuilder
 	{
 	public:
+		struct BuildResult
+		{
+			vk::UniquePipeline pipeline;
+			vk::UniquePipelineLayout layout;
+		};
+
 		static const uint32_t kVertexBinding;
 		static const uint32_t kVertexPosLocation;
 		static const uint32_t kVertexColorLocation;
@@ -17,7 +23,7 @@ namespace fdf
 			setDefault();
 		}
 
-		vk::UniquePipeline build();
+		BuildResult build();
 		void addShaderStage(
 			vk::ShaderStageFlagBits stage,
 			const std::string& filename,
@@ -33,6 +39,8 @@ namespace fdf
 		}
 		void setVertexPosAttribute(vk::Format format, uint32_t offset);
 		void setVertexColorAttribute(vk::Format format, uint32_t offset);
+
+		void setDescriptorSetLayouts(const vk::DescriptorSetLayout* layouts, uint32_t size);
 
 		void setPolygonMode(vk::PolygonMode mode) {
 			_rasterization.polygonMode = mode;
@@ -82,13 +90,14 @@ namespace fdf
 		vk::PipelineDynamicStateCreateInfo _dynamic;
 
 		vk::PipelineLayoutCreateInfo _layoutInfo;
+		vk::UniquePipelineLayout	 _layout;
 		
 		vk::RenderPass _renderPass;
 		
 		uint32_t _subpass;
 
 		void setDefault();
-		vk::GraphicsPipelineCreateInfo getCreateInfo() const;
+		vk::GraphicsPipelineCreateInfo getCreateInfo();
 		vk::UniqueShaderModule createShaderModule(const std::string& filename) const;
 	};
 }

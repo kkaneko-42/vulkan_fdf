@@ -25,8 +25,8 @@ void main() {
 layout(location = 0) in vec3 inPos;
 
 const float PI = 3.1415926535;
-float theta_x = -PI / 4;
-float theta_y = PI / 6;
+float theta_x = PI / 4;
+float theta_y = -PI / 6;
 
 mat4 rotate_x = mat4(
 	vec4(1.0, 0.0, 0.0, 0.0),
@@ -42,13 +42,27 @@ mat4 rotate_y = mat4(
 	vec4(0.0, 0.0, 0.0, 1.0)
 );
 
-mat4 translate_z = mat4(
+mat4 translate = mat4(
 	vec4(1.0, 0.0, 0.0, 0.0),
 	vec4(0.0, 1.0, 0.0, 0.0),
-	vec4(0.0, 0.0, 1.0, 5.0),
+	vec4(0.0, 0.0, 1.0, 0.5),
 	vec4(0.0, 0.0, 0.0, 1.0)
 );
 
+mat4 proj = mat4(
+	vec4(1.0, 0.0, 0.0, 0.0),
+	vec4(0.0, -2.0, 0.0, 0.0),
+	vec4(0.0, 0.0, -2.0, -1.0),
+	vec4(0.0, 0.0, 0.0, 1.0)
+);
+
+layout(binding = 0) uniform UniformBufferObject {
+	mat4 model;
+	mat4 view;
+	mat4 proj;
+} ubo;
+
 void main() {
-	gl_Position = rotate_x * rotate_y * translate_z * vec4(inPos, 1.0);
+	// gl_Position = vec4(inPos, 1.0) * rotate_x * rotate_y * translate;
+	gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPos, 1.0);
 }

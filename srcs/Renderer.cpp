@@ -1,4 +1,5 @@
 #include "Renderer.hpp"
+#include <chrono>
 
 const uint32_t fdf::Renderer::kWinWidth = 640;
 const uint32_t fdf::Renderer::kWinHeight = 480;
@@ -12,15 +13,16 @@ const std::vector<const char*> fdf::Renderer::kRequiredExtensions = {
 };
 
 void fdf::Renderer::loop() {
+	
 	while (!glfwWindowShouldClose(_window)) {
 		glfwPollEvents();
 		acquireNextImgIndex();
+		updateUniformBuffer();
 		recordCmd();
 		submitCmd();
 		drawFrame();
 	}
 	_queue.waitIdle();
-	glfwTerminate();
 }
 
 void fdf::Renderer::init() {
@@ -41,8 +43,17 @@ void fdf::Renderer::init() {
 	createFramebuffers();
 	createCmdPool();
 	createCmdBuffer();
+	
+	createUniformBuffer();
+	createDescriptorSetLayout();
+	createDescriptorPool();
+	allocateDescriptorSet();
+	updateDescriptorSet();
+	
 	createPipeline();
 	createSyncObjects();
+
+	glfwSetKeyCallback(_window, (void*)kayCallback);
 }
 
 void fdf::Renderer::createWindow() {
@@ -137,16 +148,17 @@ void fdf::Renderer::createSurface() {
 		&surface
 	);
 
-	_surface = vk::UniqueSurfaceKHR{ surface, _instance.get() };
+	//_surface = vk::UniqueSurfaceKHR{ surface, _instance.get() };
+	_surface = vk::SurfaceKHR{ surface };
 
-	_surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface.get());
-	_surfaceFormat = _physicalDevice.getSurfaceFormatsKHR(_surface.get())[0];
-	_surfacePresentMode = _physicalDevice.getSurfacePresentModesKHR(_surface.get())[0];
+	_surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
+	_surfaceFormat = _physicalDevice.getSurfaceFormatsKHR(_surface)[0];
+	_surfacePresentMode = _physicalDevice.getSurfacePresentModesKHR(_surface)[0];
 }
 
 void fdf::Renderer::createSwapchain() {
 	vk::SwapchainCreateInfoKHR createInfo;
-	createInfo.surface			= _surface.get();
+	createInfo.surface			= _surface;
 	createInfo.minImageCount	= _surfaceCapabilities.minImageCount + 1;
 	createInfo.imageFormat		= _surfaceFormat.format;
 	createInfo.imageColorSpace	= _surfaceFormat.colorSpace;
@@ -238,11 +250,89 @@ void fdf::Renderer::createCmdBuffer() {
 	vk::CommandBufferAllocateInfo allocInfo;
 	allocInfo.commandPool = _cmdPool.get();
 	allocInfo.level = vk::CommandBufferLevel::ePrimary;
-	allocInfo.commandBufferCount = 1;
+	allocInfo.commandBufferCount = _imgs.size();
 
-	auto bufs = _device->allocateCommandBuffersUnique(allocInfo);
-	// uniqueなので、所有権の譲渡
-	_cmdBuffer = std::move(bufs[0]);
+	_cmdBuffer = _device->allocateCommandBuffersUnique(allocInfo);
+}
+
+void fdf::Renderer::createUniformBuffer() {
+	const vk::DeviceSize size = sizeof(fdf::UniformBufferObject);
+
+	_uniformBuffers.resize(_imgs.size());
+	_uniformBuffersMemory.resize(_imgs.size());
+	_uniformBuffersMapped.resize(_imgs.size());
+	vk::MemoryPropertyFlags prop = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+	for (size_t i = 0; i < _imgs.size(); ++i) {
+		createBuffer(_uniformBuffers[i], _uniformBuffersMemory[i],
+			vk::BufferUsageFlagBits::eUniformBuffer,
+			vk::MemoryPropertyFlagBits(unsigned int(prop)),
+			size
+		);
+		_uniformBuffersMapped[i] = _device->mapMemory(_uniformBuffersMemory[i].get(), 0, size);
+	}
+}
+
+void fdf::Renderer::createDescriptorSetLayout() {
+	vk::DescriptorSetLayoutBinding uboBinding;
+	uboBinding.binding = 0;
+	uboBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
+	uboBinding.descriptorCount = 1;
+	uboBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+
+	vk::DescriptorSetLayoutCreateInfo createInfo;
+	createInfo.bindingCount = 1;
+	createInfo.pBindings = &uboBinding;
+
+	_descSetLayout = _device->createDescriptorSetLayoutUnique(createInfo);
+}
+
+void fdf::Renderer::createDescriptorPool() {
+	vk::DescriptorPoolSize poolSize;
+	poolSize.type = vk::DescriptorType::eUniformBuffer;
+	poolSize.descriptorCount = _imgs.size();
+
+	vk::DescriptorPoolCreateInfo createInfo;
+	createInfo.maxSets = _imgs.size();
+	createInfo.poolSizeCount = 1;
+	createInfo.pPoolSizes = &poolSize;
+	createInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+
+	_descPool = _device->createDescriptorPoolUnique(createInfo);
+}
+
+void fdf::Renderer::allocateDescriptorSet() {
+	std::vector<vk::DescriptorSetLayout> layouts;
+	for (size_t i = 0; i < _imgs.size(); ++i)
+	{
+		layouts.push_back(_descSetLayout.get());
+	}
+
+	vk::DescriptorSetAllocateInfo allocInfo;
+	allocInfo.descriptorPool = _descPool.get();
+	allocInfo.descriptorSetCount = _imgs.size();
+	allocInfo.pSetLayouts = layouts.data();
+
+	_descSets = _device->allocateDescriptorSetsUnique(allocInfo);
+}
+
+void fdf::Renderer::updateDescriptorSet() {
+	for (size_t i = 0; i < _imgs.size(); ++i) {
+		vk::DescriptorBufferInfo bufInfo;
+		bufInfo.buffer = _uniformBuffers[i].get();
+		bufInfo.offset = 0;
+		bufInfo.range = VK_WHOLE_SIZE;
+
+		vk::WriteDescriptorSet writeDesc;
+		writeDesc.dstSet = _descSets[i].get();
+		writeDesc.dstBinding = 0;
+		writeDesc.descriptorType = vk::DescriptorType::eUniformBuffer;
+		writeDesc.descriptorCount = 1;
+		writeDesc.pBufferInfo = &bufInfo;
+		writeDesc.pImageInfo = nullptr;
+		writeDesc.pTexelBufferView = nullptr;
+
+		_device->updateDescriptorSets({ writeDesc }, nullptr);
+	}
 }
 
 void fdf::Renderer::createPipeline() {
@@ -260,21 +350,29 @@ void fdf::Renderer::createPipeline() {
 	);
 	builder.setPrimitiveTopology(vk::PrimitiveTopology::eTriangleStrip);
 	builder.setVertexBinding(sizeof(fdf::Vertex));
-	builder.setVertexPosAttribute(vk::Format::eR32G32B32Sfloat, offsetof(fdf::Vertex, x));
+	builder.setVertexPosAttribute(vk::Format::eR32G32B32Sfloat, offsetof(fdf::Vertex, pos));
 	builder.setVertexColorAttribute(vk::Format::eR32G32B32A32Uint, offsetof(fdf::Vertex, rgba));
 	builder.setPolygonMode(vk::PolygonMode::eLine);
 	builder.setWH(kWinWidth, kWinHeight);
 	builder.setRenderPass(_renderPass.get());
 	builder.setSubpass(0);
+	
+	builder.setDescriptorSetLayouts(&_descSetLayout.get(), 1);
 
-	_pipeline = builder.build();
+	auto result = builder.build();
+	_pipeline = std::move(result.pipeline);
+	_pipelineLayout = std::move(result.layout);
 }
 
 void fdf::Renderer::createSyncObjects() {
+	_cmdFences.resize(_imgs.size());
 	vk::FenceCreateInfo fenceInfo;
 	fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
 
-	_cmdFence = _device->createFenceUnique(fenceInfo);
+	for (size_t i = 0; i < _imgs.size(); ++i)
+	{
+		_cmdFences[i] = _device->createFenceUnique(fenceInfo);
+	}
 
 	vk::SemaphoreCreateInfo renderSemInfo, presentSemInfo;
 
@@ -295,10 +393,10 @@ void fdf::Renderer::acquireNextImgIndex() {
 
 void fdf::Renderer::recordCmd() {
 	// 前フレームのコマンド実行完了を待機
-	_device->waitForFences({ _cmdFence.get() }, VK_TRUE, UINT32_MAX);
+	_device->waitForFences({ _cmdFences[_currentImgIndex].get()}, VK_TRUE, UINT32_MAX);
 
 	vk::CommandBufferBeginInfo cmdBeginInfo;
-	_cmdBuffer->begin(cmdBeginInfo);
+	_cmdBuffer[_currentImgIndex]->begin(cmdBeginInfo);
 
 	vk::RenderPassBeginInfo rpBeginInfo;
 	rpBeginInfo.renderPass = _renderPass.get();
@@ -309,32 +407,41 @@ void fdf::Renderer::recordCmd() {
 	vk::ClearValue clearValue = { {0.0f, 0.0f, 0.0f, 0.0f} };
 	rpBeginInfo.pClearValues = &clearValue;
 
-	_cmdBuffer->beginRenderPass(
+	_cmdBuffer[_currentImgIndex]->beginRenderPass(
 		rpBeginInfo,
 		vk::SubpassContents::eInline
 	);
-	_cmdBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline.get());
-	_cmdBuffer->bindVertexBuffers(0, { _vertexBuffer.get()}, { 0 });
-	_cmdBuffer->bindIndexBuffer(_indexBuffer.get(), 0, vk::IndexType::eUint32);
+	_cmdBuffer[_currentImgIndex]->bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline.get());
+	_cmdBuffer[_currentImgIndex]->bindVertexBuffers(0, { _vertexBuffer.get()}, { 0 });
+	_cmdBuffer[_currentImgIndex]->bindIndexBuffer(_indexBuffer.get(), 0, vk::IndexType::eUint32);
+	
+	_cmdBuffer[_currentImgIndex]->bindDescriptorSets(
+		vk::PipelineBindPoint::eGraphics,
+		_pipelineLayout.get(),
+		0,
+		{ _descSets[_currentImgIndex].get() },
+		nullptr
+	);
+	
 	
 	// _cmdBuffer->draw(_vertices.size(), 1, 0, 0);
-	_cmdBuffer->drawIndexed(_vertexIndices.size(), 1, 0, 0, 0);
+	_cmdBuffer[_currentImgIndex]->drawIndexed(_vertexIndices.size(), 1, 0, 0, 0);
 
-	_cmdBuffer->endRenderPass();
-	_cmdBuffer->end();
+	_cmdBuffer[_currentImgIndex]->endRenderPass();
+	_cmdBuffer[_currentImgIndex]->end();
 }
 
 void fdf::Renderer::submitCmd() {
 	vk::SubmitInfo info;
 	info.commandBufferCount = 1;
-	info.pCommandBuffers = &_cmdBuffer.get();
+	info.pCommandBuffers = &_cmdBuffer[_currentImgIndex].get();
 	info.waitSemaphoreCount = 1;
 	info.pWaitSemaphores = &_presentSem.get();
 	info.signalSemaphoreCount = 1;
 	info.pSignalSemaphores = &_renderSem.get();
 
-	_device->resetFences({ _cmdFence.get() });
-	_queue.submit({ info }, _cmdFence.get());
+	_device->resetFences({ _cmdFences[_currentImgIndex].get() });
+	_queue.submit({ info }, _cmdFences[_currentImgIndex].get());
 }
 
 void fdf::Renderer::drawFrame() {
@@ -353,34 +460,47 @@ void fdf::Renderer::importVertex(
 	const std::vector<fdf::Vertex>& vertices,
 	size_t row, size_t col)
 {
+	const size_t dataSize = sizeof(fdf::Vertex) * vertices.size();
 	_vertexIndices = createVertexIndicesStrip(row, col);
 	_vertices = vertices;
 
-	createVertexBuffer();
-	allocateVertexBuffer();
-	_device->bindBufferMemory(_vertexBuffer.get(), _vertexBufferMemory.get(), 0);
-	void* vertDst = _device->mapMemory(_vertexBufferMemory.get(), 0, sizeof(fdf::Vertex) * vertices.size());
-	std::memcpy(vertDst, vertices.data(), sizeof(fdf::Vertex) * vertices.size());
-	_device->unmapMemory(_vertexBufferMemory.get());
+	createBuffer(_vertexBuffer, _vertexBufferMemory,
+		vk::BufferUsageFlagBits::eVertexBuffer,
+		vk::MemoryPropertyFlagBits::eHostVisible,
+		dataSize
+	);
+	copyBuffer(_vertexBufferMemory, vertices.data(), dataSize);
 
-	createIndexBuffer();
-	allocateIndexBuffer();
-	_device->bindBufferMemory(_indexBuffer.get(), _indexBufferMemory.get(), 0);
-	void* idxDst = _device->mapMemory(_indexBufferMemory.get(), 0, sizeof(uint32_t) * _vertexIndices.size());
-	std::memcpy(idxDst, _vertexIndices.data(), sizeof(uint32_t) * _vertexIndices.size());
-	_device->unmapMemory(_indexBufferMemory.get());
+	createBuffer(_indexBuffer, _indexBufferMemory,
+		vk::BufferUsageFlagBits::eIndexBuffer,
+		vk::MemoryPropertyFlagBits::eHostVisible,
+		dataSize
+	);
+	copyBuffer(_indexBufferMemory, _vertexIndices.data(), sizeof(uint32_t) * _vertexIndices.size());
 }
 
-void fdf::Renderer::createVertexBuffer() {
+void fdf::Renderer::setUniformBuffer(const fdf::UniformBufferObject& ubo) {
+	for (size_t i = 0; i < _uniformBuffersMapped.size(); ++i) {
+		std::memcpy(&_uniformBuffersMapped[i], &ubo, sizeof(fdf::UniformBufferObject));
+	}
+}
+
+void fdf::Renderer::createBuffer(
+	vk::UniqueBuffer& dstBuf,
+	vk::UniqueDeviceMemory& dstMem,
+	vk::BufferUsageFlagBits usage,
+	vk::MemoryPropertyFlagBits memProps,
+	vk::DeviceSize size)
+{
+	/* Create buffer */
 	vk::BufferCreateInfo createInfo;
-	createInfo.usage = vk::BufferUsageFlagBits::eVertexBuffer;
-	createInfo.size = sizeof(fdf::Vertex) * _vertices.size();
+	createInfo.usage = usage;
+	createInfo.size = size;
 
-	_vertexBuffer = _device->createBufferUnique(createInfo);
-}
+	dstBuf = _device->createBufferUnique(createInfo);
 
-void fdf::Renderer::allocateVertexBuffer() {
-	vk::MemoryRequirements req = _device->getBufferMemoryRequirements(_vertexBuffer.get());
+	/* Allocate Buffer */
+	vk::MemoryRequirements req = _device->getBufferMemoryRequirements(dstBuf.get());
 
 	vk::MemoryAllocateInfo allocInfo;
 	allocInfo.allocationSize = req.size;
@@ -388,43 +508,23 @@ void fdf::Renderer::allocateVertexBuffer() {
 	std::optional<uint32_t> memTypeIdx = getMemoryTypeIndex(
 		_physicalDevice,
 		req.memoryTypeBits,
-		vk::MemoryPropertyFlagBits::eHostVisible
+		memProps
 	);
-
 	if (!memTypeIdx.has_value()) {
-		throw std::runtime_error("Suitable memory type not found");
+		throw std::runtime_error("Suitable device memory not found");
 	}
-	allocInfo.memoryTypeIndex = memTypeIdx.value();
 
-	_vertexBufferMemory = _device->allocateMemoryUnique(allocInfo);
+	allocInfo.memoryTypeIndex = memTypeIdx.value();
+	dstMem = _device->allocateMemoryUnique(allocInfo);
+
+	/* Bind memory */
+	_device->bindBufferMemory(dstBuf.get(), dstMem.get(), 0);
 }
 
-void fdf::Renderer::createIndexBuffer() {
-	vk::BufferCreateInfo createInfo;
-	createInfo.usage = vk::BufferUsageFlagBits::eIndexBuffer;
-	createInfo.size = sizeof(fdf::Vertex) * _vertices.size();
-
-	_indexBuffer = _device->createBufferUnique(createInfo);
-}
-
-void fdf::Renderer::allocateIndexBuffer() {
-	vk::MemoryRequirements req = _device->getBufferMemoryRequirements(_indexBuffer.get());
-
-	vk::MemoryAllocateInfo allocInfo;
-	allocInfo.allocationSize = req.size;
-
-	std::optional<uint32_t> memTypeIdx = getMemoryTypeIndex(
-		_physicalDevice,
-		req.memoryTypeBits,
-		vk::MemoryPropertyFlagBits::eHostVisible
-	);
-
-	if (!memTypeIdx.has_value()) {
-		throw std::runtime_error("Suitable memory type not found");
-	}
-	allocInfo.memoryTypeIndex = memTypeIdx.value();
-
-	_indexBufferMemory = _device->allocateMemoryUnique(allocInfo);
+void fdf::Renderer::copyBuffer(vk::UniqueDeviceMemory& dst, const void* src, size_t size) {
+	void* mappedDst = _device->mapMemory(dst.get(), 0, size);
+	std::memcpy(mappedDst, src, size);
+	_device->unmapMemory(dst.get());
 }
 
 // 縮退三角形によるstrip最適化
@@ -498,6 +598,45 @@ std::optional<uint32_t> fdf::Renderer::getMemoryTypeIndex(
 	}
 
 	return res;
+}
+
+void fdf::Renderer::updateUniformBuffer()
+{
+	/*
+	static auto startTime = std::chrono::high_resolution_clock::now();
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+	_ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	_ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	_ubo.proj = glm::perspective(glm::radians(30.0f), (float)kWinWidth / kWinHeight, 0.0f, 1.0f);
+	_ubo.proj[1][1] *= -1;
+	*/
+
+	std::memcpy(_uniformBuffersMapped[_currentImgIndex], &_ubo, sizeof(_ubo));
+}
+
+void fdf::Renderer::kayCallback(
+	GLFWwindow* win,
+	int key,
+	int scancode,
+	int action,
+	int mods)
+{
+	if (action == GLFW_PRESS) {
+		switch (key) {
+		case GLFW_KEY_RIGHT:
+			_ubo.model = glm::rotate(_ubo.model, glm::radians(1.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			break;
+
+		case GLFW_KEY_LEFT:
+			_ubo.model = glm::rotate(_ubo.model, glm::radians(-1.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			break;
+
+		default:
+			break;
+		}
+	}
 }
 
 /*

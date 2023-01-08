@@ -1,10 +1,12 @@
 #include "MapParser.hpp"
 #include "Utils.hpp"
 
-std::vector<fdf::Vertex> fdf::MapParser::parse(
+fdf::MapParser::ParseResult fdf::MapParser::parse(
 	const std::string& filename)
 {
 	_fileContent = fdf::readFile(filename);
+	_currentRow = 0;
+	_currentCol = 0;
 
 	// 列数取得の為、第一行のパースはwhile外で
 	_vertices.clear();
@@ -22,7 +24,7 @@ std::vector<fdf::Vertex> fdf::MapParser::parse(
 		}
 	}
 
-	return _vertices;
+	return ParseResult{ _vertices, _currentRow, _currentCol };
 }
 
 char fdf::MapParser::getCurrentChar() {
@@ -55,9 +57,9 @@ void fdf::MapParser::parseRow() {
 void fdf::MapParser::vertex() {
 	fdf::Vertex vert;
 
-	vert.x = _currentCol;
-	vert.y = _currentRow;
-	vert.z = static_cast<float>(digit());
+	vert.pos.x = _currentCol;
+	vert.pos.y = _currentRow;
+	vert.pos.z = static_cast<float>(digit());
 
 	if (getCurrentChar() == ',') {
 		cursorNext();

@@ -18,7 +18,9 @@ static std::vector<char> readFile(const std::string& filename) {
 	return buffer;
 }
 
-vk::UniquePipeline fdf::GraphicsPipelineBuilder::build()
+#include <iostream>
+
+fdf::GraphicsPipelineBuilder::BuildResult fdf::GraphicsPipelineBuilder::build()
 {
 	vk::ResultValue result = _device.createGraphicsPipelineUnique(
 		nullptr, getCreateInfo()
@@ -28,7 +30,7 @@ vk::UniquePipeline fdf::GraphicsPipelineBuilder::build()
 		// error
 	}
 
-	return std::move(result.value);
+	return BuildResult{ std::move(result.value), std::move(_layout) };
 }
 
 void fdf::GraphicsPipelineBuilder::addShaderStage(
@@ -60,6 +62,13 @@ void fdf::GraphicsPipelineBuilder::setVertexColorAttribute(
 	_vertexAttributes[kVertexColorLocation].offset = offset;
 }
 
+void fdf::GraphicsPipelineBuilder::setDescriptorSetLayouts(
+	const vk::DescriptorSetLayout* layouts, uint32_t size)
+{
+	_layoutInfo.setLayoutCount = size;
+	_layoutInfo.pSetLayouts = layouts;
+}
+
 void fdf::GraphicsPipelineBuilder::setDefault() {
 	_viewport.x = 0.0;
 	_viewport.y = 0.0;
@@ -78,7 +87,7 @@ void fdf::GraphicsPipelineBuilder::setDefault() {
 
 	_vertexInput.vertexBindingDescriptionCount = 1;
 	_vertexInput.pVertexBindingDescriptions = &_vertexBinding;
-	_vertexInput.vertexAttributeDescriptionCount = 2;
+	_vertexInput.vertexAttributeDescriptionCount = 1;
 	_vertexInput.pVertexAttributeDescriptions = _vertexAttributes;
 
 	/*
@@ -96,7 +105,7 @@ void fdf::GraphicsPipelineBuilder::setDefault() {
 	_rasterization.polygonMode = vk::PolygonMode::eFill;
 	_rasterization.lineWidth = 1.0f;
 	_rasterization.cullMode = vk::CullModeFlagBits::eBack;
-	_rasterization.frontFace = vk::FrontFace::eClockwise;
+	_rasterization.frontFace = vk::FrontFace::eCounterClockwise;
 	_rasterization.depthBiasEnable = false;
 
 	_multisample.sampleShadingEnable = false;
@@ -119,8 +128,9 @@ void fdf::GraphicsPipelineBuilder::setDefault() {
 	_subpass = 0;
 }
 
-vk::GraphicsPipelineCreateInfo fdf::GraphicsPipelineBuilder::getCreateInfo() const
+vk::GraphicsPipelineCreateInfo fdf::GraphicsPipelineBuilder::getCreateInfo()
 {
+	_layout = _device.createPipelineLayoutUnique(_layoutInfo);
 	vk::GraphicsPipelineCreateInfo createInfo;
 
 	createInfo.stageCount = _shaderStages.size();
@@ -133,7 +143,7 @@ vk::GraphicsPipelineCreateInfo fdf::GraphicsPipelineBuilder::getCreateInfo() con
 	createInfo.pMultisampleState = &_multisample;
 	createInfo.pDepthStencilState = &_depthStencil;
 	createInfo.pColorBlendState = &_colorBlend;
-	createInfo.layout = _device.createPipelineLayoutUnique(_layoutInfo).get();
+	createInfo.layout = _layout.get();
 	createInfo.renderPass = _renderPass;
 	createInfo.subpass = _subpass;
 
