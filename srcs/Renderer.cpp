@@ -12,8 +12,16 @@ const std::vector<const char*> fdf::Renderer::kRequiredExtensions = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 };
 
+fdf::UniformBufferObject fdf::Renderer::_ubo = {
+	// glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+	glm::mat4(1.0f),
+	glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+	glm::perspective(glm::radians(30.0f), (float)kWinWidth / kWinHeight, 0.0f, 1.0f)
+};
+
 void fdf::Renderer::loop() {
-	
+	_ubo.proj[1][1] *= -1;
+
 	while (!glfwWindowShouldClose(_window)) {
 		glfwPollEvents();
 		acquireNextImgIndex();
@@ -53,7 +61,8 @@ void fdf::Renderer::init() {
 	createPipeline();
 	createSyncObjects();
 
-	glfwSetKeyCallback(_window, (void*)kayCallback);
+	glfwSetKeyCallback(_window, kayCallback);
+	glfwSetScrollCallback(_window, scrollCallback);
 }
 
 void fdf::Renderer::createWindow() {
@@ -623,20 +632,39 @@ void fdf::Renderer::kayCallback(
 	int action,
 	int mods)
 {
-	if (action == GLFW_PRESS) {
+	const float kRotationRate = 3.0f;
+	if (action == GLFW_PRESS || action == GLFW_REPEAT) {
 		switch (key) {
 		case GLFW_KEY_RIGHT:
-			_ubo.model = glm::rotate(_ubo.model, glm::radians(1.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			_ubo.model = glm::rotate(_ubo.model, glm::radians(kRotationRate), glm::vec3(0.0f, 0.0f, 1.0f));
 			break;
 
 		case GLFW_KEY_LEFT:
-			_ubo.model = glm::rotate(_ubo.model, glm::radians(-1.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			_ubo.model = glm::rotate(_ubo.model, glm::radians(-kRotationRate), glm::vec3(0.0f, 0.0f, 1.0f));
+			break;
+
+		case GLFW_KEY_UP:
+			_ubo.view = glm::rotate(_ubo.view, glm::radians(-kRotationRate), glm::vec3(0.0f, 1.0f, 0.0f));
+			break;
+
+		case GLFW_KEY_DOWN:
+			_ubo.view = glm::rotate(_ubo.view, glm::radians(kRotationRate), glm::vec3(0.0f, 1.0f, 0.0f));
 			break;
 
 		default:
 			break;
 		}
 	}
+}
+
+void fdf::Renderer::scrollCallback(GLFWwindow* win, double xoffset, double yoffset)
+{
+	float scaleRate = 2.0f;
+	if (yoffset < 0) {
+		scaleRate = 1 / scaleRate;
+	}
+
+	_ubo.model = glm::scale(_ubo.model, glm::vec3(scaleRate));
 }
 
 /*

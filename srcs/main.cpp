@@ -12,29 +12,37 @@ const std::vector<fdf::Vertex> testVertices = {
 	fdf::Vertex{ { 0.0f, 0.5f, 0.0f }, (uint32_t)0xffffffff},
 	fdf::Vertex{ { 0.5f, 0.5f, 0.0f }, (uint32_t)0xffffffff},
 };
-/*
-const fdf::UniformBufferObject ubo = {
-	glm::mat4(1.0f),
-	glm::lookAt(
-		glm::vec3(2, 2, 2), glm::vec3(0, 0, 0), glm::vec3(0, -1, 0)
-	),
-	glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.0f, 1.0f)
-};
-*/
 
-const fdf::UniformBufferObject ubo = {
-	glm::mat4(1.0f),
-	glm::mat4(1.0f),
-	glm::mat4(1.0f)
-};
+static void translateVertices(
+	std::vector<fdf::Vertex>& vertices,
+	float translateX, float translateY)
+{
+	for (size_t i = 0; i < vertices.size(); ++i) {
+		vertices[i].pos.x += translateX;
+		vertices[i].pos.y += translateY;
+	}
+}
+
+static void rescaleZ(
+	std::vector<fdf::Vertex>& vertices,
+	float rescaleRate)
+{
+	for (size_t i = 0; i < vertices.size(); ++i) {
+		vertices[i].pos.z *= rescaleRate;
+	}
+}
 
 int main() {
 	fdf::MapParser parser;
 	std::vector<fdf::Vertex> vertices;
+	size_t row, col;
 	fdf::Renderer renderer;
 
 	try {
-		// vertices = parser.parse("maps/42.fdf");
+		auto parseResult = parser.parse("maps/42.fdf");
+		vertices = parseResult.vertices;
+		row = parseResult.row;
+		col = parseResult.col;
 		renderer.init();
 	}
 	catch (const std::exception& e) {
@@ -42,11 +50,9 @@ int main() {
 		return 1;
 	}
 
-	for (const auto& vert : vertices) {
-		vert.print();
-	}
-
-	renderer.importVertex(testVertices, 3, 3);
+	translateVertices(vertices, -(float)col / 2, -(float)row / 2);
+	rescaleZ(vertices, -0.2);
+	renderer.importVertex(vertices, row, col);
 	renderer.loop();
 
 	return 0;

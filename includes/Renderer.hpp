@@ -12,13 +12,6 @@ namespace fdf
 	class Renderer
 	{
 	public:
-		Renderer() : _currentImgIndex(0) {
-			_ubo.model = glm::mat4(1.0f);
-			_ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-			_ubo.proj = glm::perspective(glm::radians(30.0f), (float)kWinWidth / kWinHeight, 0.0f, 1.0f);
-			_ubo.proj[1][1] *= -1;
-		}
-
 		~Renderer()
 		{
 			glfwDestroyWindow(_window);
@@ -38,6 +31,11 @@ namespace fdf
 
 		static const uint32_t kWinWidth, kWinHeight;
 		static const std::string kAppName, kWindowName;
+
+		/* Input callbacks */
+		static fdf::UniformBufferObject _ubo;
+		static void kayCallback(GLFWwindow* win, int key, int scancode, int action, int mods);
+		static void scrollCallback(GLFWwindow* win, double xoffset, double yoffset);
 
 	private:
 		GLFWwindow*							_window;
@@ -103,11 +101,10 @@ namespace fdf
 		void createPipeline();
 		void createSyncObjects();
 
-		/* Input callbacks */
-		void kayCallback(GLFWwindow* win, int key, int scancode, int action, int mods);
+		
 
 		/* Uniform Buffers */
-		fdf::UniformBufferObject _ubo;
+		
 		void updateUniformBuffer();
 
 		/* Drawing loop */

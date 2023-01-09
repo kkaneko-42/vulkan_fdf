@@ -104,7 +104,7 @@ void fdf::GraphicsPipelineBuilder::setDefault() {
 	_rasterization.rasterizerDiscardEnable = false;
 	_rasterization.polygonMode = vk::PolygonMode::eFill;
 	_rasterization.lineWidth = 1.0f;
-	_rasterization.cullMode = vk::CullModeFlagBits::eBack;
+	_rasterization.cullMode = vk::CullModeFlagBits::eNone;
 	_rasterization.frontFace = vk::FrontFace::eCounterClockwise;
 	_rasterization.depthBiasEnable = false;
 
