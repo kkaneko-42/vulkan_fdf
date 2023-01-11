@@ -85,5 +85,6 @@
     <None Include="shaders\compile.bat">
       <Filter>ソース ファイル</Filter>
     </None>
+    <None Include="maps\42-col.fdf" />
   </ItemGroup>
 </Project>

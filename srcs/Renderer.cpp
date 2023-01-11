@@ -360,7 +360,7 @@ void fdf::Renderer::createPipeline() {
 	builder.setPrimitiveTopology(vk::PrimitiveTopology::eTriangleStrip);
 	builder.setVertexBinding(sizeof(fdf::Vertex));
 	builder.setVertexPosAttribute(vk::Format::eR32G32B32Sfloat, offsetof(fdf::Vertex, pos));
-	builder.setVertexColorAttribute(vk::Format::eR32G32B32A32Uint, offsetof(fdf::Vertex, rgba));
+	builder.setVertexColorAttribute(vk::Format::eR32G32B32A32Sfloat, offsetof(fdf::Vertex, rgba));
 	builder.setPolygonMode(vk::PolygonMode::eLine);
 	builder.setWH(kWinWidth, kWinHeight);
 	builder.setRenderPass(_renderPass.get());
@@ -636,19 +636,19 @@ void fdf::Renderer::kayCallback(
 	if (action == GLFW_PRESS || action == GLFW_REPEAT) {
 		switch (key) {
 		case GLFW_KEY_RIGHT:
-			_ubo.model = glm::rotate(_ubo.model, glm::radians(kRotationRate), glm::vec3(0.0f, 0.0f, 1.0f));
-			break;
-
-		case GLFW_KEY_LEFT:
 			_ubo.model = glm::rotate(_ubo.model, glm::radians(-kRotationRate), glm::vec3(0.0f, 0.0f, 1.0f));
 			break;
 
+		case GLFW_KEY_LEFT:
+			_ubo.model = glm::rotate(_ubo.model, glm::radians(kRotationRate), glm::vec3(0.0f, 0.0f, 1.0f));
+			break;
+
 		case GLFW_KEY_UP:
-			_ubo.view = glm::rotate(_ubo.view, glm::radians(-kRotationRate), glm::vec3(0.0f, 1.0f, 0.0f));
+			_ubo.model = glm::rotate(_ubo.model, glm::radians(-kRotationRate), glm::vec3(1.0f, 0.0f, 0.0f));
 			break;
 
 		case GLFW_KEY_DOWN:
-			_ubo.view = glm::rotate(_ubo.view, glm::radians(kRotationRate), glm::vec3(0.0f, 1.0f, 0.0f));
+			_ubo.model = glm::rotate(_ubo.model, glm::radians(kRotationRate), glm::vec3(1.0f, 0.0f, 0.0f));
 			break;
 
 		default:
@@ -659,7 +659,7 @@ void fdf::Renderer::kayCallback(
 
 void fdf::Renderer::scrollCallback(GLFWwindow* win, double xoffset, double yoffset)
 {
-	float scaleRate = 2.0f;
+	float scaleRate = 1.2f;
 	if (yoffset < 0) {
 		scaleRate = 1 / scaleRate;
 	}

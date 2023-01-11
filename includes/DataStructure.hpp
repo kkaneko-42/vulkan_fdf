@@ -13,17 +13,30 @@ namespace fdf
 	struct Vertex
 	{
 		glm::vec3 pos;
-		uint32_t rgba;
-
-		// Vertex() : x(0), y(0), z(0), rgba(0x000000ff) {}
+		glm::vec4 rgba;
 
 		void print() const {
 			std::cout << "(";
 			std::cout << pos.x << ", ";
 			std::cout << pos.y << ", ";
-			std::cout << pos.z << ", ";
-			std::cout << std::hex << rgba;
+			std::cout << pos.z;
+			std::cout << "), ";
+
+			std::cout << "(";
+			std::cout << rgba.x << ", ";
+			std::cout << rgba.y << ", ";
+			std::cout << rgba.z << ", ";
+			std::cout << rgba.w;
 			std::cout << ")" << std::endl;
+		}
+
+		// 0xff0000ff => (1.0f, 0.0f, 0.0f, 1.0f)
+		void setRGBA(uint32_t color) {
+			rgba.x = (color & 0xff000000);
+			rgba.y = (color & 0x00ff0000);
+			rgba.z = (color & 0x0000ff00);
+			rgba.w = (color & 0x000000ff);
+			// rgba /= 255;
 		}
 	};
 

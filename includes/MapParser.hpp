@@ -24,6 +24,7 @@ namespace fdf
 		static const std::string kValidMapExtension;
 
 	private:
+		std::string _fileName;
 		std::vector<char> _fileContent;
 		std::vector<fdf::Vertex> _vertices;
 		size_t _cursorIndex;
@@ -39,7 +40,7 @@ namespace fdf
 		int digit();
 		uint32_t hexDigit();
 
-		static bool isHexDigit(char c);
+		std::string generateErrorMsg(const std::string& msg) const;
 	};
 }
 

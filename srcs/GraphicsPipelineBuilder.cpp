@@ -87,7 +87,7 @@ void fdf::GraphicsPipelineBuilder::setDefault() {
 
 	_vertexInput.vertexBindingDescriptionCount = 1;
 	_vertexInput.pVertexBindingDescriptions = &_vertexBinding;
-	_vertexInput.vertexAttributeDescriptionCount = 1;
+	_vertexInput.vertexAttributeDescriptionCount = 2;
 	_vertexInput.pVertexAttributeDescriptions = _vertexAttributes;
 
 	/*
@@ -104,8 +104,8 @@ void fdf::GraphicsPipelineBuilder::setDefault() {
 	_rasterization.rasterizerDiscardEnable = false;
 	_rasterization.polygonMode = vk::PolygonMode::eFill;
 	_rasterization.lineWidth = 1.0f;
-	_rasterization.cullMode = vk::CullModeFlagBits::eNone;
-	_rasterization.frontFace = vk::FrontFace::eCounterClockwise;
+	_rasterization.cullMode = vk::CullModeFlagBits::eBack;
+	_rasterization.frontFace = vk::FrontFace::eClockwise;
 	_rasterization.depthBiasEnable = false;
 
 	_multisample.sampleShadingEnable = false;

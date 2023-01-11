@@ -159,6 +159,7 @@ call compile.bat</Command>
     <None Include="maps\10-70.fdf" />
     <None Include="maps\100-6.fdf" />
     <None Include="maps\20-60.fdf" />
+    <None Include="maps\42-col.fdf" />
     <None Include="maps\42.fdf" />
     <None Include="maps\50-4.fdf" />
     <None Include="maps\basictest.fdf" />

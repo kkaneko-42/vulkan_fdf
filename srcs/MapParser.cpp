@@ -4,7 +4,8 @@
 fdf::MapParser::ParseResult fdf::MapParser::parse(
 	const std::string& filename)
 {
-	_fileContent = fdf::readFile(filename);
+	_fileName = filename;
+	_fileContent = fdf::readFile(_fileName);
 	_currentRow = 0;
 	_currentCol = 0;
 
@@ -20,7 +21,7 @@ fdf::MapParser::ParseResult fdf::MapParser::parse(
 		parseRow();
 		if (_vertices.size() % rowLength != 0) {
 			// not complete tetragon
-			throw std::runtime_error("not complete tetragon");
+			throw std::runtime_error(generateErrorMsg("not complete tetragon"));
 		}
 	}
 
@@ -60,10 +61,11 @@ void fdf::MapParser::vertex() {
 	vert.pos.x = _currentCol;
 	vert.pos.y = _currentRow;
 	vert.pos.z = static_cast<float>(digit());
+	vert.rgba = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	if (getCurrentChar() == ',') {
 		cursorNext();
-		vert.rgba = (hexDigit() << 8);
+		vert.setRGBA((hexDigit() << 8) + 0x000000ff);
 	}
 
 	_vertices.push_back(vert);
@@ -83,7 +85,7 @@ void fdf::MapParser::newline() {
 	}
 
 	// invalid newline code
-	throw std::runtime_error("invalid newline");
+	throw std::runtime_error(generateErrorMsg("invalid newline"));
 }
 
 int fdf::MapParser::digit() {
@@ -96,7 +98,7 @@ int fdf::MapParser::digit() {
 	}
 
 	if (!std::isdigit(getCurrentChar())) {
-		throw std::runtime_error("invalid digit");
+		throw std::runtime_error(generateErrorMsg("invalid digit found"));
 	}
 
 	while (std::isdigit(getCurrentChar())) {
@@ -111,19 +113,23 @@ uint32_t fdf::MapParser::hexDigit() {
 	if (getCurrentChar() == '0') {
 		cursorNext();
 		if (getCurrentChar() == 'x') {
-			// parse error not found
-			cursorNext();
+			// parse error not found(correct map)
 			
 			uint32_t n = 0;
-			while (isHexDigit(getCurrentChar())) {
-				if (std::isdigit(getCurrentChar())) {
-					n = (n * 16) + getCurrentChar() - '0';
-				}
-				else {
-					n = (n * 16) + getCurrentChar() - 'A' + 10;
-				}
-				
+			
+			while (true) {
 				cursorNext();
+				char c = getCurrentChar();
+
+				if (std::isdigit(c)) {
+					n = (n * 16) + c - '0';
+				} else if ('a' <= c && c <= 'f') {
+					n = (n * 16) + c - 'a' + 10;
+				} else if ('A' <= c && c <= 'F') {
+					n = (n * 16) + c - 'A' + 10;
+				} else {
+					break;
+				}
 			}
 
 			return n;
@@ -131,15 +137,15 @@ uint32_t fdf::MapParser::hexDigit() {
 	}
 
 	// invalid hex such as "0x", "ffff00"
-	throw std::runtime_error("invalid hex");
+	throw std::runtime_error(generateErrorMsg("invalid hex"));
 }
 
-bool fdf::MapParser::isHexDigit(char c) {
-	return (
-		std::isdigit(c) ||
-		('A' <= c && c <= 'F')
-	);
+std::string fdf::MapParser::generateErrorMsg(const std::string& msg) const
+{
+	std::string rowStr = std::to_string(_currentRow + 1);
+	return _fileName + ":" + rowStr + ": error: " + msg;
 }
+
 /*
 int main() {
 	fdf::MapParser parser;
